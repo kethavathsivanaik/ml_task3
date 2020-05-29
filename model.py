@@ -15,7 +15,7 @@ from keras.utils import np_utils
 import keras
 
 # loads the MNIST dataset
-(x_train, y_train), (x_test, y_test)  = mnist.load_data()
+(x_train, y_train), (x_test, y_test)  = mnist.load_data("/home/student/Desktop/MLOPS_task3/mnist.npz")
 
 # Lets store the number of rows and columns
 img_rows = x_train[0].shape[0]
