@@ -1,44 +1,21 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
-import struct
-import numpy as np
-
-def read_idx(filename):
-    """Credit: https://gist.github.com/tylerneylon"""
-    with open(filename, 'rb') as f:
-        zero, data_type, dims = struct.unpack('>HBB', f.read(4))
-        shape = tuple(struct.unpack('>I', f.read(4))[0] for d in range(dims))
-        return np.frombuffer(f.read(), dtype=np.uint8).reshape(shape)
-
-
 # In[2]:
 
 
-x_train = read_idx("./fashion_mnist/train-images-idx3-ubyte")
-y_train = read_idx("./fashion_mnist/train-labels-idx1-ubyte")
-x_test = read_idx("./fashion_mnist/t10k-images-idx3-ubyte")
-y_test = read_idx("./fashion_mnist/t10k-labels-idx1-ubyte")
-
-
-# In[5]:
-
-
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D
+from keras.layers.normalization import BatchNormalization
+from keras.regularizers import l2
 from keras.datasets import mnist
 from keras.utils import np_utils
 import keras
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
-from keras import backend as K
 
-# Training Parameters
-batch_size = 128
-epochs = 3
+# loads the MNIST dataset
+(x_train, y_train), (x_test, y_test)  = mnist.load_data()
 
 # Lets store the number of rows and columns
 img_rows = x_train[0].shape[0]
@@ -61,66 +38,67 @@ x_test = x_test.astype('float32')
 x_train /= 255
 x_test /= 255
 
-print('x_train shape:', x_train.shape)
-print(x_train.shape[0], 'train samples')
-print(x_test.shape[0], 'test samples')
-
 # Now we one hot encode outputs
 y_train = np_utils.to_categorical(y_train)
 y_test = np_utils.to_categorical(y_test)
 
-# Let's count the number columns in our hot encoded matrix 
-print ("Number of Classes: " + str(y_test.shape[1]))
-
 num_classes = y_test.shape[1]
 num_pixels = x_train.shape[1] * x_train.shape[2]
+
+
+# In[3]:
+
 
 # create model
 model = Sequential()
 
-model.add(Conv2D(32, kernel_size=(3, 3),
-                 activation='relu',
-                 input_shape=input_shape))
-model.add(BatchNormalization())
+# 2 sets of CRP (Convolution, RELU, Pooling)
+model.add(Conv2D(20, (5, 5),
+                 padding = "same", 
+                 input_shape = input_shape))
+model.add(Activation("relu"))
+model.add(MaxPooling2D(pool_size = (2, 2), strides = (2, 2)))
 
-model.add(Conv2D(64, (3, 3), activation='relu'))
-model.add(BatchNormalization())
+model.add(Conv2D(50, (5, 5),
+                 padding = "same"))
+model.add(Activation("relu"))
+model.add(MaxPooling2D(pool_size = (2, 2), strides = (2, 2)))
 
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
+# Fully connected layers (w/ RELU)
 model.add(Flatten())
-model.add(Dense(128, activation='relu'))
-model.add(BatchNormalization())
+model.add(Dense(500))
+model.add(Activation("relu"))
 
-model.add(Dropout(0.5))
-model.add(Dense(num_classes, activation='softmax'))
-
+# Softmax (for classification)
+model.add(Dense(num_classes))
+model.add(Activation("softmax"))
+           
 model.compile(loss = 'categorical_crossentropy',
               optimizer = keras.optimizers.Adadelta(),
               metrics = ['accuracy'])
-
+    
 print(model.summary())
 
 
-# In[6]:
+# In[4]:
 
+
+# Training Parameters
+batch_size = 128
+epochs = 3
 
 history = model.fit(x_train, y_train,
           batch_size=batch_size,
           epochs=epochs,
-          verbose=1,
-          validation_data=(x_test, y_test))
+          validation_data=(x_test, y_test),
+          shuffle=True)
 
-score = model.evaluate(x_test, y_test, verbose=0)
-print('Test loss:', score[0])
-print('Test accuracy:', score[1])
+#model.save("mnist_LeNet.h5")
 
-
-# In[ ]:
-
-
-
+# Evaluate the performance of our trained model
+scores = model.evaluate(x_test, y_test, verbose=1)
+print('Test loss:', scores[0])
+print('Test accuracy:', scores[1])
 
 
 # In[ ]:
@@ -132,19 +110,23 @@ print('Test accuracy:', score[1])
 # In[ ]:
 
 
+for i in range (4):
+    if scores[1] < 0.98:
+        batch_size =128
+        epochs =+ 5
+        history = model.fit(x_train, y_train,
+              batch_size=batch_size,
+              epochs=epochs,
+              validation_data=(x_test, y_test),
+              shuffle=True)
 
-
-
-# In[98]:
-
-
-
-
-
-# In[ ]:
-
-
-
+        #model.save("mnist_LeNet.h5")
+        # Evaluate the performance of our trained model
+        scores = model.evaluate(x_test, y_test, verbose=1)
+        print('Test loss:', scores[0])
+        print('Test accuracy:', scores[1])
+    else :
+        break
 
 
 # In[ ]:
